@@ -31,13 +31,25 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
 
-      - name: Find generated APKs
-        run: find app/build/outputs/apk -type f -name '*.apk' -print
+      - name: Locate generated APK
+        id: apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find app/build/outputs/apk -type f -name '*.apk' -print -quit 2>/dev/null || true)"
+          if [ -z "$APK" ]; then
+            echo "No APK was produced!"
+            echo "Available build outputs:"
+            find app/build/outputs -type f -print 2>/dev/null || true
+            exit 1
+          fi
+          echo "Found APK: $APK"
+          echo "path=$APK" >> "$GITHUB_OUTPUT"
 
       - name: Upload TuxTermux APK
         uses: actions/upload-artifact@v4
         with:
           name: TuxTermux-debug-apk
-          path: app/build/outputs/apk/**/*.apk
+          path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
           retention-days: 14
